@@ -1,0 +1,825 @@
+asp.net (session)-login:
+
+ Dim dt As DataTable = db.GetTable(cm)
+        If Not dt Is Nothing AndAlso dt.Rows.Count > 0 Then
+            Session("userid") = dt.Rows(0).Item("UserId")
+            Session("username") = dt.Rows(0).Item("UserName")
+            Response.Redirect("Display.aspx")
+			
+		***home:	
+		
+			 Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+
+        If Session("UserId") Is Nothing Then
+            Response.Redirect("Login.aspx")
+        Else
+            If Not IsPostBack Then
+                lblUser.Text = "Welcome " + Session("UserName")
+                LoadData()
+            End If
+        End If
+    End Sub
+	
+	ADMIN SITE ADD PRODUCT:
+	
+	<?php
+
+include 'connection.php';
+if(isset($_POST['add_product'])){
+
+   $name = mysqli_real_escape_string($conn, $_POST['name']);
+   $price = mysqli_real_escape_string($conn, $_POST['price']);
+   $details = mysqli_real_escape_string($conn, $_POST['details']);
+   $image = $_FILES['image']['name'];
+   $image_size = $_FILES['image']['size'];
+   $image_tmp_name = $_FILES['image']['tmp_name'];
+   $image_folter = 'img/'.$image;
+
+   $select_product_name = mysqli_query($conn, "SELECT name FROM `products` WHERE name = '$name'") or die('query failed');
+
+   if(mysqli_num_rows($select_product_name) > 0){
+      $message[] = 'product name already exist!';
+   }else{
+      $insert_product = mysqli_query($conn, "INSERT INTO `products`(name, details, price, image) VALUES('$name', '$details', '$price', '$image')") or die('query failed');
+
+      if($insert_product){
+         if($image_size > 2000000){
+            $message[] = 'image size is too large!';
+         }else{
+            move_uploaded_file($image_tmp_name, $image_folter);
+            $message[] = 'product added successfully!';
+         }
+      }
+   }
+
+}
+
+if(isset($_GET['delete'])){
+   $delete_id = $_GET['delete'];
+   mysqli_query($conn, "DELETE FROM products WHERE id = '$delete_id'") or die('query failed');
+   header('location:admin_product.php');
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>products</title>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+   <link rel="stylesheet" href="css/admin_style.css">
+
+</head>
+<body>
+   
+<header class="header">
+
+   <div class="flex">
+
+      <a href="admin_page.php" class="logo">Admin<span>Panel</span></a>
+
+      <nav class="navbar">
+         <a href="dashboard.php">home</a>
+         <a href="admin_product.php">products</a>
+         <a href="admin_orders.php">orders</a>
+         <a href="admin_users.php">users</a>
+         <a href="admin_contacts.php">messages</a>
+      </nav>
+
+      <div class="icons">
+         <div id="menu-btn" class="fas fa-bars"></div>
+         <a href="logout.php"><i class="fas fa-user"></i></a> 
+      </div>
+
+      
+
+   </div>
+
+</header>
+
+<section class="add-products">
+
+   <form action="" method="POST" enctype="multipart/form-data">
+      <h3>add new product</h3>
+      <input type="text" class="box" required placeholder="enter product name" name="name">
+      <input type="number" min="0" class="box" required placeholder="enter product price" name="price">
+      <textarea name="details" class="box" required placeholder="enter product details" cols="30" rows="10"></textarea>
+      <input type="file" accept="img/jpg, img/jpeg, img/png" required class="box" name="image">
+      <input type="submit" value="add product" name="add_product" class="btn">
+   </form>
+
+</section>
+
+<section class="show-products">
+
+   <div class="box-container">
+
+      <?php
+         $select_products = mysqli_query($conn, "SELECT * FROM `products`") or die('query failed');
+         if(mysqli_num_rows($select_products) > 0){
+            while($fetch_products = mysqli_fetch_assoc($select_products)){
+      ?>
+      <div class="box">
+         <div class="price"><?php echo $fetch_products['price']; ?>/-</div>
+         <img class="image" src="img/<?php echo $fetch_products['image']; ?>" alt="">
+         <div class="name"><?php echo $fetch_products['name']; ?></div>
+         <div class="details"><?php echo $fetch_products['details']; ?></div>
+         <a href="admin_update_product.php?update=<?php echo $fetch_products['id']; ?>" class="option-btn">update</a>
+         <a href="admin_product.php?delete=<?php echo $fetch_products['id']; ?>" class="delete-btn">delete</a>
+      </div>
+      <?php
+         }
+      }else{
+         echo '<p class="empty">no products added yet!</p>';
+      }
+      ?>
+   </div>
+   
+
+</section>
+<script src="js/admin_script.js"></script>
+
+</body>
+</html>
+
+UPDATE PRODUCT:
+
+<?php
+include 'connection.php';
+
+if(isset($_POST['update_product'])){
+
+   $update_p_id = $_POST['update_p_id'];
+   $name = mysqli_real_escape_string($conn, $_POST['name']);
+   $price = mysqli_real_escape_string($conn, $_POST['price']);
+   $details = mysqli_real_escape_string($conn, $_POST['details']);
+
+   mysqli_query($conn, "UPDATE `products` SET name = '$name', details = '$details', price = '$price' WHERE id = '$update_p_id'") or die('query failed');
+
+   $image = $_FILES['image']['name'];
+   $image_size = $_FILES['image']['size'];
+   $image_tmp_name = $_FILES['image']['tmp_name'];
+   $image_folter = 'img/'.$image;
+   $old_image = $_POST['update_p_image'];
+   
+   if(!empty($image)){
+      if($image_size > 2000000){
+         $message[] = 'image file size is too large!';
+      }else{
+         mysqli_query($conn, "UPDATE `products` SET image = '$image' WHERE id = '$update_p_id'") or die('query failed');
+         move_uploaded_file($image, $image_folter);
+         header('location:admin_product.php');
+         $message[] = 'image updated successfully!';
+      }
+   }
+       
+
+   $message[] = 'product updated successfully!';
+
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>update product</title>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+   <link rel="stylesheet" href="css/admin_style.css">
+
+</head>
+<body>
+   
+<header class="header">
+
+   <div class="flex">
+
+      <a href="admin_page.php" class="logo">Admin<span>Panel</span></a>
+
+      <nav class="navbar">
+         <a href="dashboard.php">home</a>
+         <a href="admin_product.php">products</a>
+         <a href="admin_orders.php">orders</a>
+         <a href="admin_users.php">users</a>
+         <a href="admin_contacts.php">messages</a>
+      </nav>
+
+      <div class="icons">
+         <div id="menu-btn" class="fas fa-bars"></div>
+         <a href="logout.php"><i class="fas fa-user"></i></a> 
+      </div>
+
+      
+
+   </div>
+
+</header>
+<section class="update-product">
+
+<?php
+
+   $update_id = $_GET['update'];
+   $select_products = mysqli_query($conn, "SELECT * FROM `products` WHERE id = '$update_id'") or die('query failed');
+   if(mysqli_num_rows($select_products) > 0){
+      while($fetch_products = mysqli_fetch_assoc($select_products)){
+?>
+
+<form action="" method="post" enctype="multipart/form-data">
+   <img src="img/<?php echo $fetch_products['image']; ?>" class="image"  alt="">
+   <input type="hidden" value="<?php echo $fetch_products['id']; ?>" name="update_p_id">
+   <input type="hidden" value="<?php echo $fetch_products['image']; ?>" name="update_p_image">
+   <input type="text" class="box" value="<?php echo $fetch_products['name']; ?>" required placeholder="update product name" name="name">
+   <input type="number" min="0" class="box" value="<?php echo $fetch_products['price']; ?>" required placeholder="update product price" name="price">
+   <textarea name="details" class="box" required placeholder="update product details" cols="30" rows="10"><?php echo $fetch_products['details']; ?></textarea>
+   <input type="file" accept="image/jpg, image/jpeg, image/png" class="box" name="image">
+   <input type="submit" value="update product" name="update_product" class="btn">
+   <a href="admin_product.php" class="option-btn">go back</a>
+</form>
+
+<?php
+      }
+   }else{
+      echo '<p class="empty">no update product select</p>';
+   }
+?>
+
+</section>
+<script src="js/admin_script.js"></script>
+
+</body>
+</html>
+
+USER SITE DISPLAY():
+
+<?php
+include 'connection.php';
+session_start();
+
+$user_id = $_SESSION['user_id'];
+
+if(!isset($user_id)){
+   header('location:login.php');
+};
+
+
+
+if(isset($_POST['add_to_cart'])){
+
+    $product_id = $_POST['product_id'];
+    $product_name = $_POST['product_name'];
+    $product_price = $_POST['product_price'];
+    $product_image = $_POST['product_image'];
+    $product_quantity = $_POST['product_quantity'];
+
+    $check_cart_numbers = mysqli_query($conn, "SELECT * FROM `cart` WHERE name = '$product_name' AND user_id = '$user_id'") or die('query failed');
+
+    if(mysqli_num_rows($check_cart_numbers) > 0){
+        $message[] = 'already added to cart';
+    }else{
+
+        
+
+       
+
+        mysqli_query($conn, "INSERT INTO `cart`(user_id, pid, name, price, quantity, image) VALUES('$user_id', '$product_id', '$product_name', '$product_price', '$product_quantity', '$product_image')") or die('query failed');
+        $message[] = 'product added to cart';
+    }
+
+}
+
+?><!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>shop</title>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+   <link rel="stylesheet" href="css/style.css">
+   <script src="js/script.js"></script>
+</head>
+<body>
+   
+<header class="header">
+
+<div class="flex">
+
+    <a class="logo">flowers.</a>
+
+    <nav class="navbar">
+        <ul>
+        <li><a href="home.php">home</a></li>
+            <li><a href="#">pages +</a>
+            
+                <ul>
+                    <li><a href="about.php">about</a></li>
+                    <li><a href="contact.php">contact</a></li>
+                    <li><a href="review.php">review</a></li>
+                </ul>
+            </li>
+            <li><a href="shop.php">shop</a></li>
+            <li><a href="orders.php">orders</a></li>
+            <li><a href="#">account +</a>
+                <ul>
+                    <li><a href="login.php">login</a></li>
+                    <li><a href="Adminlogin.php">Admin login</a></li>
+                    <li><a href="register.php">register</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="icons">
+        <div id="menu-btn" class="fas fa-bars"></div>
+        <a href="logout.php"><i class="fas fa-user" ></i></a> 
+        <?php
+        
+    
+            $select_cart_count = mysqli_query($conn, "SELECT * FROM `cart` WHERE user_id = '$user_id'") or die('query failed');
+            $cart_num_rows = mysqli_num_rows($select_cart_count);
+        ?>
+        <a href="cart.php"><i class="fas fa-shopping-cart"></i><span>(<?php echo $cart_num_rows; ?>)</span></a>
+    </div>
+
+   
+
+</div>
+
+
+
+</header>
+
+
+<section class="heading">
+    <h3>our shop</h3>
+    
+</section>
+
+<section class="products">
+
+   <h1 class="title">latest products</h1>
+
+   <div class="box-container">
+
+      <?php
+         $select_products = mysqli_query($conn, "SELECT * FROM `products`") or die('query failed');
+         if(mysqli_num_rows($select_products) > 0){
+            while($fetch_products = mysqli_fetch_assoc($select_products)){
+      ?>
+      <form action="" method="POST" class="box">
+         
+         <div class="price"><?php echo $fetch_products['price']; ?>/-</div>
+         <img src="img/<?php echo $fetch_products['image']; ?>" alt="" class="image">
+         <div class="name"><?php echo $fetch_products['name']; ?></div>
+         <input type="number" name="product_quantity" value="1" min="0" class="qty">
+         <input type="hidden" name="product_id" value="<?php echo $fetch_products['id']; ?>">
+         <input type="hidden" name="product_name" value="<?php echo $fetch_products['name']; ?>">
+         <input type="hidden" name="product_price" value="<?php echo $fetch_products['price']; ?>">
+         <input type="hidden" name="product_image" value="<?php echo $fetch_products['image']; ?>">
+        
+         <input type="submit" value="add to cart" name="add_to_cart" class="btn">
+      </form>
+      <?php
+         }
+      }else{
+         echo '<p class="empty">no products added yet!</p>';
+      }
+      ?>
+
+   </div>
+
+</section>
+<section class="footer">
+
+    <div class="box-container">
+
+        <div class="box">
+            <h3>quick links</h3>
+            <a href="home.php">home</a>
+            <a href="about.php">about</a>
+            <a href="contact.php">contact</a>
+            <a href="shop.php">shop</a>
+        </div>
+
+        <div class="box">
+            <h3>extra links</h3>
+            <a href="login.php">login</a>
+            <a href="register.php">register</a>
+            <a href="orders.php">my orders</a>
+            <a href="cart.php">my cart</a>
+        </div>
+
+        <div class="box">
+            <h3>contact info</h3>
+            <p> <i class="fas fa-phone"></i> +123-456-7890 </p>
+            <p> <i class="fas fa-phone"></i> +111-222-3333 </p>
+            <p> <i class="fas fa-envelope"></i> n@gmail.com </p>
+            <p> <i class="fas fa-map-marker-alt"></i> suart,gujarat - 123-456 </p>
+        </div>
+
+        <div class="box">
+            <h3>follow us</h3>
+            <a href="#"><i class="fab fa-facebook-f"></i>facebook</a>
+            <a href="#"><i class="fab fa-twitter"></i>twitter</a>
+            <a href="#"><i class="fab fa-instagram"></i>instagram</a>
+            <a href="#"><i class="fab fa-linkedin"></i>linkedin</a>
+        </div>
+
+    </div>
+
+    <div class="credit">&copy; copyright @ <?php echo date('Y'); ?> by <span>Niyati patel</span> </div>
+
+</section>
+
+</body>
+</html>
+
+PHP CONNECTION:
+
+<?php
+
+$conn = mysqli_connect('localhost','root','','flower') or die('connection failed');
+
+?>
+
+PHP INSERT:
+
+<?php
+	include 'connection.php';
+	
+	session_start();
+    $msg="";
+    if(isset($_POST['submit']))
+	{
+		$tourname=$_POST['tourname'];
+		$price=$_POST['price'];
+		$date=$_POST['date'];
+		$days=$_POST['days'];
+        $mobileno=$_POST['mobileno'];
+
+
+        $insert="insert into booking (tourid,tourname,price,date,days,mobileno)Values('$tourid','$tourname','$price','$date','$days','$mobileno')";
+		echo $insert;
+			
+	
+		$exc=mysqli_query($con,$insert);
+		if($exc==true)
+{
+			header('location:bookhistory.php');
+		}
+			
+    }
+?>
+
+	
+PHP DISPLAY/DELETE:
+
+<?php
+	include 'connection.php';
+    if(isset($_GET['id']))
+	{
+		$id=$_GET['id'];
+		$del="delete from booking where tourid=$id";
+		$exc=mysqli_query($con,$del);
+		
+	}
+		
+?>
+   
+<!doctype html>
+<html lang="en">
+  <head>
+   
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+       
+ *{
+	padding: 0px;
+	margin: 0px;
+	box-sizing: border-box;
+	list-style: none;
+	font-family: 'Poppins', sans-serif;
+
+}
+
+
+        nav{
+    display: flex;
+    padding: 30px 8%;
+    background-color: transparent;
+    
+}
+.logo{
+    font-size: 22px;
+    color: #545454;
+    cursor: pointer;
+}
+nav ul{
+    flex: 1;
+    text-align: right;
+}
+nav ul li{
+    list-style: none;
+    display: inline-block;
+    margin: 0 20px;
+    transition: 0.1s ease-out;
+}
+
+nav ul li:hover{
+    border-bottom: 2px solid #00999c;
+}
+
+nav ul li a{
+    text-decoration: none;
+    font-size: 12px;
+    color:green;
+    font-weight: bold;
+}
+
+body{
+   background-image:url('img/back.jpg');
+   background-repeat: no-repeat;
+   background-size: cover;
+  
+   
+}
+
+.signup a{
+	text-decoration: none;
+	color: #000;
+	font-size: 18px;
+	font-weight: bold;
+	border-radius: 12px;
+	padding: 12px 30px;
+	border: 2px solid #ff0000;
+}
+.signup a:hover{
+	background-color: red;
+	transition: 0.6s;
+}
+
+        </style>
+
+    <title></title>
+</head>
+<body>
+
+        
+    <div class="container mt-4">
+    
+    <nav>
+
+<h2 class="logo">Travel</h2>
+<ul>
+<li><a href="Home.php">HOME</a></li>
+    <li><a href="About.php">ABOUT</a></li>
+    <li><a href="Package.php">PACKAGE</a></li>
+    <li><a href="bookhistory.php">BOOKHISTORY</a></li>
+    
+ <li><a href="Logout.php">LOGOUT</a></li> 
+</ul>
+<div class="signup">
+<a href="Signup.php">Sign Up</a>
+<a href="Login.php">Login</a>
+</div>
+</nav> 
+<br/>   
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>BOOKING DEATILS
+                            <a href=" packagelist.php" class="btn btn-primary float-end">ADD TOUR</a>
+                        </h4>
+                    </div>
+                    <div class="card-body">
+
+                        <table border='0' class="table table-hover">
+                           
+                                <tr>
+                                     <th>Edit</th>
+                                    <th>ID</th>
+                                    <th>Tour Name</th>
+                                    <th>Price</th>
+                                    <th>Date</th>
+                                    <th>Days</th>
+                                    <th>Mobileno</th>
+                                    <th>Delete</th>
+                                </tr>
+                           
+                            <tbody>
+                            <?php 
+                                    $query = "SELECT * FROM booking";
+                                    $query_run = mysqli_query($con, $query);
+
+										if(mysqli_num_rows($query_run) > 0)
+										{
+											foreach($query_run as $tour)
+											{
+												?>
+                                               
+												<tr>
+                                                    <td><a href="edit.php?id=<?php echo $tour['tourid'];?>" class="btn btn-primary" > Edit </a></td>
+													<td><?= $tour['tourid']; ?></td>
+													<td><?= $tour['tourname']; ?></td>
+													<td><?= $tour['price']; ?></td>
+													<td><?= $tour['date']; ?></td>
+													<td><?= $tour['days']; ?></td>
+                                                    <td><?= $tour['mobileno']; ?></td>
+                                                     <td><a href="bookhistory.php?id=<?php echo $tour['tourid'];?>" class="btn btn-danger" > Delete </a></td>
+													
+                                                   
+                                                     </form>
+													</td>
+												</tr>
+												<?php
+											}
+										}
+										else
+										{
+											echo "<h5> No Record Found </h5>";
+										}
+									?>
+								</tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+                                    </body>
+                                    </html>
+
+
+PHP UPDATE:
+
+<?php
+	include 'connection.php';
+    $id="";
+    $row="";
+    $tourname = "";
+    $price = "";
+     $date = "";
+     $days = "";
+     $mobileno = "";
+     $update="";
+
+     if( isset($_POST["submit"]))
+     {
+         $utourname = $_POST["tourname"];
+         $uprice = $_POST["price"];
+          $udate = $_POST["date"];
+          $udays = $_POST["days"];
+          $umobileno = $_POST["mobileno"];
+ 
+         $id=$_GET['id'];
+         $insert="update booking set tourname='$utourname',Price='$uprice',date='$udate',Days='$udays',mobileno='$umobileno' where tourid='$id'";
+         echo ($insert);
+         $exc=mysqli_query($con,$insert);
+         
+         if($exc){
+         	header('location:bookhistory.php');
+         }
+      }
+    
+	if(isset($_REQUEST["id"])){
+    $id=$_REQUEST["id"];
+    $update="select * from booking where tourid=$id ";
+    $exc=mysqli_query($con,$update);
+    $row = mysqli_fetch_assoc($exc);
+     if($row){
+        $tourname=$row['tourname'];
+        $price=$row['price'];
+        $date=$row['date'];
+        $days=$row['days'];
+        $mobileno=$row['mobileno'];
+       }
+   
+
+    }
+
+        
+
+?>
+ <div class = "form-row">
+                      <input id="tourname" type="text" class="form-control" name="tourname" placeholder="Tour name" required value=<?php echo $tourname?>>
+                    </div>
+                    <br>
+					
+					
+	PHP SESSION OTHER PAGE:
+	
+	session_start();
+
+$user_id = $_SESSION['user_id'];
+
+if(!isset($user_id)){
+   header('location:login.php');
+};
+
+
+PHP SESSION LOGIN:
+
+<?php
+
+@include 'config.php';
+
+session_start();
+
+if(isset($_POST['submit'])){
+
+   $filter_email = filter_var($_POST['email'], FILTER_SANITIZE_STRING);
+   $email = mysqli_real_escape_string($conn, $filter_email);
+   $filter_pass = filter_var($_POST['pass'], FILTER_SANITIZE_STRING);
+   $pass = mysqli_real_escape_string($conn, md5($filter_pass));
+
+   $select_users = mysqli_query($conn, "SELECT * FROM `users` WHERE email = '$email' AND password = '$pass'") or die('query failed');
+
+
+   if(mysqli_num_rows($select_users) > 0){
+      
+      $row = mysqli_fetch_assoc($select_users);
+
+      if($row['user_type'] == 'admin'){
+
+         $_SESSION['admin_name'] = $row['name'];
+         $_SESSION['admin_email'] = $row['email'];
+         $_SESSION['admin_id'] = $row['id'];
+         header('location:admin_page.php');
+
+      }elseif($row['user_type'] == 'user'){
+
+         $_SESSION['user_name'] = $row['name'];
+         $_SESSION['user_email'] = $row['email'];
+         $_SESSION['user_id'] = $row['id'];
+         header('location:home.php');
+
+      }else{
+         $message[] = 'no user found!';
+      }
+
+   }else{
+      $message[] = 'incorrect email or password!';
+   }
+
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>login</title>
+
+   <!-- font awesome cdn link  -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+   <!-- custom css file link  -->
+   <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+
+<?php
+if(isset($message)){
+   foreach($message as $message){
+      echo '
+      <div class="message">
+         <span>'.$message.'</span>
+         <i class="fas fa-times" onclick="this.parentElement.remove();"></i>
+      </div>
+      ';
+   }
+}
+?>
+   
+<section class="form-container">
+
+   <form action="" method="post">
+      <h3>login now</h3>
+      <input type="email" name="email" class="box" placeholder="enter your email" required>
+      <input type="password" name="pass" class="box" placeholder="enter your password" required>
+      <input type="submit" class="btn" name="submit" value="login now">
+      <p>don't have an account? <a href="register.php">register now</a></p>
+   </form>
+
+</section>
+
+</body>
+</html>
+
